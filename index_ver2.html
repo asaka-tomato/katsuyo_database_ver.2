@@ -2,71 +2,71 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>活用法データベース（AppSheet連携）</title>
+  <title>AppSheet 活用記録（新データ）</title>
   <style>
     body {
-      font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
-      background-color: #fafafa;
-      padding: 20px;
+      font-family: "Noto Sans JP", sans-serif;
+      margin: 2em;
+      background: #fafafa;
     }
-    .recipe-card {
+    h1 {
+      text-align: center;
+      margin-bottom: 1em;
+    }
+    .card {
       background: white;
-      border-radius: 16px;
+      border-radius: 10px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      padding: 16px;
-      margin: 16px 0;
+      margin: 1.5em auto;
       max-width: 600px;
+      padding: 1em 2em;
     }
-    img {
-      width: 100%;
-      border-radius: 12px;
-      margin-top: 8px;
+    .card img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>活用法データベース</h1>
-  <div id="recipes">読み込み中...</div>
+  <h1>AppSheet 活用記録（227行目以降）</h1>
+  <div id="records">データを読み込み中...</div>
 
   <script>
-    const SHEET_URL = "https://spreadsheets.google.com/feeds/list/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/0/public/values?alt=json";
+    // スプレッドシートのJSON URL
+    const sheetUrl = "https://spreadsheets.google.com/feeds/list/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/0/public/values?alt=json";
 
-    async function loadSheet() {
-      const container = document.getElementById("recipes");
-      try {
-        const res = await fetch(SHEET_URL + "&nocache=" + Date.now());
-        const json = await res.json();
-        const entries = json.feed.entry;
-        container.innerHTML = "";
+    fetch(sheetUrl)
+      .then(res => res.json())
+      .then(data => {
+        const entries = data.feed.entry;
+        let html = "";
 
-        // 各行を処理
-        entries.forEach(e => {
-          const date = e["gsx$作成日"]?.["$t"] || "";
-          const name = e["gsx$料理名活用方法"]?.["$t"] || "";
-          const material = e["gsx$使用したシネコ生産物"]?.["$t"] || "";
-          const source = e["gsx$出典"]?.["$t"] || "";
-          const image = e["gsx$公開url"]?.["$t"] || "";
+        // 227行目以降だけを表示（0始まりなので index >= 226）
+        entries.slice(226).forEach(row => {
+          const date = row.gsx$作成日?.$t || "";
+          const recipe = row.gsx$料理名活用方法?.$t || "";
+          const product = row.gsx$使用したシネコ生産物?.$t || "";
+          const source = row.gsx$出典?.$t || "";
+          const imageUrl = row.gsx$appsheet?.$t || ""; // M列(Appsheet)
 
-          // カード要素を作成
-          const card = document.createElement("div");
-          card.className = "recipe-card";
-          card.innerHTML = `
-            <h3>${name}</h3>
-            <p><b>作成日：</b>${date}</p>
-            <p><b>使用素材：</b>${material}</p>
-            <p><b>出典：</b>${source}</p>
-            ${image ? `<img src="${image}" alt="${name}">` : ""}
+          html += `
+            <div class="card">
+              <h3>${recipe || "（無題）"}</h3>
+              <p><b>作成日:</b> ${date}</p>
+              <p><b>使用したシネコ生産物:</b> ${product}</p>
+              <p><b>出典:</b> ${source}</p>
+              ${imageUrl ? `<img src="${imageUrl}" alt="${recipe}">` : ""}
+            </div>
           `;
-          container.appendChild(card);
         });
-      } catch (err) {
-        console.error(err);
-        container.innerHTML = "<p>データを読み込めませんでした。</p>";
-      }
-    }
 
-    loadSheet();
+        document.getElementById("records").innerHTML = html || "表示できるデータがありません。";
+      })
+      .catch(err => {
+        document.getElementById("records").innerHTML = "データを読み込めませんでした。";
+        console.error(err);
+      });
   </script>
 </body>
 </html>
