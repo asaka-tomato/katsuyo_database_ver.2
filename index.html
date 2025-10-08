@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>AppSheet 活用記録（227行目以降のみ）</title>
+  <title>AppSheet 活用記録（227行目以降）</title>
   <style>
     body {
       font-family: "Noto Sans JP", sans-serif;
@@ -26,6 +26,10 @@
       border-radius: 6px;
       margin-top: 10px;
     }
+    .error {
+      color: #b00;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -33,7 +37,7 @@
   <div id="records">データを読み込み中...</div>
 
   <script>
-    // ✅ あなたのスプレッドシートを gviz JSON 形式で読み取る
+    // あなたのスプレッドシートの gviz JSON URL
     const sheetUrl =
       "https://docs.google.com/spreadsheets/d/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/gviz/tq?tqx=out:json";
 
@@ -42,43 +46,58 @@
         const res = await fetch(sheetUrl);
         const text = await res.text();
 
-        // Google JSONPを整形して通常のJSONに変換
+        // Google JSONPを整形
         const json = JSON.parse(text.substr(47).slice(0, -2));
         const rows = json.table.rows;
 
         const container = document.getElementById("records");
         container.innerHTML = "";
 
-        // 227行目以降のみを表示（indexは0始まり）
+        // ✅ 227行目以降のみを抽出
         rows.slice(226).forEach((r) => {
           const cells = r.c;
           if (!cells) return;
 
-          // 列の対応（スプレッドシートの列順に合わせる）
-          const date = cells[0]?.v || ""; // 作成日
-          const recipe = cells[1]?.v || ""; // 料理名(活用方法)
-          const product = cells[2]?.v || ""; // 使用したシネコ生産物
-          const source = cells[3]?.v || ""; // 出典
-          const imageUrl = cells[12]?.v || ""; // M列(AppSheet画像URL)
+          // 各列をスプレッドシートの構造に合わせて取得
+          const date = cells[0]?.v || "";
+          const recipe = cells[1]?.v || "";
+          const product = cells[2]?.v || "";
+          const source = cells[3]?.v || "";
+          const note = cells[7]?.v || "";
+          const imageUrl = cells[12]?.v || "";
+
+          // 画像URLがGoogle Driveの場合、直接表示できる形式に変換
+          let displayUrl = imageUrl;
+          if (imageUrl.includes("drive.google.com")) {
+            const match = imageUrl.match(/id=([^&]+)/);
+            if (match) {
+              displayUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+            }
+          }
+
+          // データが空ならスキップ
+          if (!date && !recipe && !imageUrl) return;
 
           const card = document.createElement("div");
           card.className = "card";
           card.innerHTML = `
-            <h3>${recipe}</h3>
+            <h3>${recipe || "（名称なし）"}</h3>
             <p><b>作成日:</b> ${date}</p>
             <p><b>使用したシネコ生産物:</b> ${product}</p>
             <p><b>出典:</b> ${source}</p>
-            ${imageUrl ? `<img src="${imageUrl}" alt="${recipe}">` : ""}
+            <p><b>備考:</b> ${note}</p>
+            ${displayUrl ? `<img src="${displayUrl}" alt="${recipe}">` : ""}
           `;
           container.appendChild(card);
         });
 
         if (container.innerHTML === "")
-          container.innerHTML = "227行目以降のデータが見つかりません。";
+          container.innerHTML = "<p class='error'>227行目以降のデータが見つかりません。</p>";
+
       } catch (err) {
         console.error("読み込みエラー:", err);
         document.getElementById("records").innerHTML =
-          "データを読み込めませんでした。";
+          "<p class='error'>データを読み込めませんでした。スプレッドシートの共有設定を確認してください。</p>";
       }
     }
 
