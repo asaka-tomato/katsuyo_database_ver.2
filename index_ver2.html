@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>活用法データベース（AppSheet連携）</title>
+  <style>
+    body {
+      font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background-color: #fafafa;
+      padding: 20px;
+    }
+    .recipe-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 16px;
+      margin: 16px 0;
+      max-width: 600px;
+    }
+    img {
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>活用法データベース</h1>
+  <div id="recipes">読み込み中...</div>
+
+  <script>
+    const SHEET_URL = "https://spreadsheets.google.com/feeds/list/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/0/public/values?alt=json";
+
+    async function loadSheet() {
+      const container = document.getElementById("recipes");
+      try {
+        const res = await fetch(SHEET_URL + "&nocache=" + Date.now());
+        const json = await res.json();
+        const entries = json.feed.entry;
+        container.innerHTML = "";
+
+        // 各行を処理
+        entries.forEach(e => {
+          const date = e["gsx$作成日"]?.["$t"] || "";
+          const name = e["gsx$料理名活用方法"]?.["$t"] || "";
+          const material = e["gsx$使用したシネコ生産物"]?.["$t"] || "";
+          const source = e["gsx$出典"]?.["$t"] || "";
+          const image = e["gsx$公開url"]?.["$t"] || "";
+
+          // カード要素を作成
+          const card = document.createElement("div");
+          card.className = "recipe-card";
+          card.innerHTML = `
+            <h3>${name}</h3>
+            <p><b>作成日：</b>${date}</p>
+            <p><b>使用素材：</b>${material}</p>
+            <p><b>出典：</b>${source}</p>
+            ${image ? `<img src="${image}" alt="${name}">` : ""}
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = "<p>データを読み込めませんでした。</p>";
+      }
+    }
+
+    loadSheet();
+  </script>
+</body>
+</html>
