@@ -39,67 +39,64 @@
   <script>
     // あなたのスプレッドシートの gviz JSON URL
     const sheetUrl =
-      "https://docs.google.com/spreadsheets/d/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/gviz/tq?tqx=out:json";
+  "https://docs.google.com/spreadsheets/d/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/gviz/tq?sheet=全体活用記録&tqx=out:json";
 
-    async function loadData() {
-      try {
-        const res = await fetch(sheetUrl);
-        const text = await res.text();
+async function loadData() {
+  try {
+    const res = await fetch(sheetUrl);
+    const text = await res.text();
 
-        // Google JSONPを整形
-        const json = JSON.parse(text.substr(47).slice(0, -2));
-        const rows = json.table.rows;
+    const json = JSON.parse(text.substr(47).slice(0, -2));
+    const rows = json.table.rows;
 
-        const container = document.getElementById("records");
-        container.innerHTML = "";
+    const container = document.getElementById("records");
+    container.innerHTML = "";
 
-        // ✅ 227行目以降のみを抽出
-        rows.slice(226).forEach((r) => {
-          const cells = r.c;
-          if (!cells) return;
+    // ✅ 225行目以降に変更（227行目付近のデータを含める）
+    rows.slice(224).forEach((r) => {
+      const cells = r.c;
+      if (!cells) return;
 
-          // 各列をスプレッドシートの構造に合わせて取得
-          const date = cells[0]?.v || "";
-          const recipe = cells[1]?.v || "";
-          const product = cells[2]?.v || "";
-          const source = cells[3]?.v || "";
-          const note = cells[7]?.v || "";
-          const imageUrl = cells[12]?.v || "";
+      const date = cells[0]?.v || "";
+      const recipe = cells[1]?.v || "";
+      const product = cells[2]?.v || "";
+      const source = cells[3]?.v || "";
+      const note = cells[7]?.v || "";
+      const imageUrl = cells[12]?.v || "";
 
-          // 画像URLがGoogle Driveの場合、直接表示できる形式に変換
-          let displayUrl = imageUrl;
-          if (imageUrl.includes("drive.google.com")) {
-            const match = imageUrl.match(/id=([^&]+)/);
-            if (match) {
-              displayUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
-            }
-          }
-
-          // データが空ならスキップ
-          if (!date && !recipe && !imageUrl) return;
-
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <h3>${recipe || "（名称なし）"}</h3>
-            <p><b>作成日:</b> ${date}</p>
-            <p><b>使用したシネコ生産物:</b> ${product}</p>
-            <p><b>出典:</b> ${source}</p>
-            <p><b>備考:</b> ${note}</p>
-            ${displayUrl ? `<img src="${displayUrl}" alt="${recipe}">` : ""}
-          `;
-          container.appendChild(card);
-        });
-
-        if (container.innerHTML === "")
-          container.innerHTML = "<p class='error'>227行目以降のデータが見つかりません。</p>";
-
-      } catch (err) {
-        console.error("読み込みエラー:", err);
-        document.getElementById("records").innerHTML =
-          "<p class='error'>データを読み込めませんでした。スプレッドシートの共有設定を確認してください。</p>";
+      let displayUrl = imageUrl;
+      if (imageUrl.includes("drive.google.com")) {
+        const match = imageUrl.match(/id=([^&]+)/);
+        if (match) {
+          displayUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+        }
       }
-    }
+
+      if (!date && !recipe && !imageUrl) return;
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <h3>${recipe || "（名称なし）"}</h3>
+        <p><b>作成日:</b> ${date}</p>
+        <p><b>使用したシネコ生産物:</b> ${product}</p>
+        <p><b>出典:</b> ${source}</p>
+        <p><b>備考:</b> ${note}</p>
+        ${displayUrl ? `<img src="${displayUrl}" alt="${recipe}">` : ""}
+      `;
+      container.appendChild(card);
+    });
+
+    if (container.innerHTML === "")
+      container.innerHTML = "<p class='error'>227行目以降のデータが見つかりません。</p>";
+
+  } catch (err) {
+    console.error("読み込みエラー:", err);
+    document.getElementById("records").innerHTML =
+      "<p class='error'>データを読み込めませんでした。共有設定を確認してください。</p>";
+  }
+}
+
 
     loadData();
   </script>
