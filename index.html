@@ -2,28 +2,28 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>AppSheet 活用記録（新データ）</title>
+  <title>AppSheet 活用記録（227行目以降のみ）</title>
   <style>
     body {
       font-family: "Noto Sans JP", sans-serif;
+      background-color: #f8f8f8;
       margin: 2em;
-      background: #fafafa;
     }
     h1 {
       text-align: center;
-      margin-bottom: 1em;
+      margin-bottom: 2em;
     }
     .card {
-      background: white;
+      background-color: #fff;
       border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       margin: 1.5em auto;
       max-width: 600px;
-      padding: 1em 2em;
+      padding: 1.5em;
     }
     .card img {
       max-width: 100%;
-      border-radius: 8px;
+      border-radius: 6px;
       margin-top: 10px;
     }
   </style>
@@ -33,40 +33,56 @@
   <div id="records">データを読み込み中...</div>
 
   <script>
-    // スプレッドシートのJSON URL
-    const sheetUrl = "https://spreadsheets.google.com/feeds/list/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/0/public/values?alt=json";
+    // ✅ あなたのスプレッドシートを gviz JSON 形式で読み取る
+    const sheetUrl =
+      "https://docs.google.com/spreadsheets/d/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/gviz/tq?tqx=out:json";
 
-    fetch(sheetUrl)
-      .then(res => res.json())
-      .then(data => {
-        const entries = data.feed.entry;
-        let html = "";
+    async function loadData() {
+      try {
+        const res = await fetch(sheetUrl);
+        const text = await res.text();
 
-        // 227行目以降だけを表示（0始まりなので index >= 226）
-        entries.slice(226).forEach(row => {
-          const date = row.gsx$作成日?.$t || "";
-          const recipe = row.gsx$料理名活用方法?.$t || "";
-          const product = row.gsx$使用したシネコ生産物?.$t || "";
-          const source = row.gsx$出典?.$t || "";
-          const imageUrl = row.gsx$appsheet?.$t || ""; // M列(Appsheet)
+        // Google JSONPを整形して通常のJSONに変換
+        const json = JSON.parse(text.substr(47).slice(0, -2));
+        const rows = json.table.rows;
 
-          html += `
-            <div class="card">
-              <h3>${recipe || "（無題）"}</h3>
-              <p><b>作成日:</b> ${date}</p>
-              <p><b>使用したシネコ生産物:</b> ${product}</p>
-              <p><b>出典:</b> ${source}</p>
-              ${imageUrl ? `<img src="${imageUrl}" alt="${recipe}">` : ""}
-            </div>
+        const container = document.getElementById("records");
+        container.innerHTML = "";
+
+        // 227行目以降のみを表示（indexは0始まり）
+        rows.slice(226).forEach((r) => {
+          const cells = r.c;
+          if (!cells) return;
+
+          // 列の対応（スプレッドシートの列順に合わせる）
+          const date = cells[0]?.v || ""; // 作成日
+          const recipe = cells[1]?.v || ""; // 料理名(活用方法)
+          const product = cells[2]?.v || ""; // 使用したシネコ生産物
+          const source = cells[3]?.v || ""; // 出典
+          const imageUrl = cells[12]?.v || ""; // M列(AppSheet画像URL)
+
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <h3>${recipe}</h3>
+            <p><b>作成日:</b> ${date}</p>
+            <p><b>使用したシネコ生産物:</b> ${product}</p>
+            <p><b>出典:</b> ${source}</p>
+            ${imageUrl ? `<img src="${imageUrl}" alt="${recipe}">` : ""}
           `;
+          container.appendChild(card);
         });
 
-        document.getElementById("records").innerHTML = html || "表示できるデータがありません。";
-      })
-      .catch(err => {
-        document.getElementById("records").innerHTML = "データを読み込めませんでした。";
-        console.error(err);
-      });
+        if (container.innerHTML === "")
+          container.innerHTML = "227行目以降のデータが見つかりません。";
+      } catch (err) {
+        console.error("読み込みエラー:", err);
+        document.getElementById("records").innerHTML =
+          "データを読み込めませんでした。";
+      }
+    }
+
+    loadData();
   </script>
 </body>
 </html>
