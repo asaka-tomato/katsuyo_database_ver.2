@@ -2,42 +2,13 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>AppSheet 活用記録（227行目以降）</title>
-  <style>
-    body {
-      font-family: "Noto Sans JP", sans-serif;
-      background-color: #f8f8f8;
-      margin: 2em;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 2em;
-    }
-    .card {
-      background-color: #fff;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      margin: 1.5em auto;
-      max-width: 600px;
-      padding: 1.5em;
-    }
-    .card img {
-      max-width: 100%;
-      border-radius: 6px;
-      margin-top: 10px;
-    }
-    .error {
-      color: #b00;
-      text-align: center;
-    }
-  </style>
+  <title>テスト表示 - JSON 行確認</title>
 </head>
 <body>
-  <h1>AppSheet 活用記録（227行目以降）</h1>
-  <div id="records">データを読み込み中...</div>
+  <h1>スプレッドシート行確認</h1>
+  <pre id="output">読み込み中...</pre>
 
   <script>
-    // ✅ スプレッドシートのJSONデータURL
     const sheetUrl =
       "https://docs.google.com/spreadsheets/d/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/gviz/tq?sheet=全体活用記録&tqx=out:json";
 
@@ -45,58 +16,21 @@
       try {
         const res = await fetch(sheetUrl);
         const text = await res.text();
-
-        // Google JSONPを整形
         const json = JSON.parse(text.substr(47).slice(0, -2));
         const rows = json.table.rows;
 
-        const container = document.getElementById("records");
-        container.innerHTML = "";
-
-        // ✅ 227行目以降を正確に表示
+        let log = `取得行数: ${rows.length}\n\n`;
         rows.forEach((r, index) => {
-          if (index < 227) return; // ← 227行目以降のみ
-          const cells = r.c;
-          if (!cells) return;
-
-          const date = cells[0]?.v || "";
-          const recipe = cells[1]?.v || "";
-          const product = cells[2]?.v || "";
-          const source = cells[3]?.v || "";
-          const note = cells[7]?.v || "";
-          const imageUrl = cells[12]?.v || "";
-
-          // Google Driveリンクを直接表示できるURLに変換
-          let displayUrl = imageUrl;
-          if (imageUrl && imageUrl.includes("drive.google.com")) {
-            const match = imageUrl.match(/id=([^&]+)/);
-            if (match) {
-              displayUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
-            }
+          const recipe = r.c[1]?.v || "";
+          const image = r.c[12]?.v || "";
+          if (recipe || image) {
+            log += `index:${index} | 料理名:${recipe} | 画像:${image}\n`;
           }
-
-          if (!date && !recipe && !imageUrl) return;
-
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <h3>${recipe || "（名称なし）"}</h3>
-            <p><b>作成日:</b> ${date}</p>
-            <p><b>使用したシネコ生産物:</b> ${product}</p>
-            <p><b>出典:</b> ${source}</p>
-            <p><b>備考:</b> ${note}</p>
-            ${displayUrl ? `<img src="${displayUrl}" alt="${recipe}">` : ""}
-          `;
-          container.appendChild(card);
         });
 
-        if (container.innerHTML === "")
-          container.innerHTML = "<p class='error'>227行目以降のデータが見つかりません。</p>";
-
-      } catch (err) {
-        console.error("読み込みエラー:", err);
-        document.getElementById("records").innerHTML =
-          "<p class='error'>データを読み込めませんでした。スプレッドシートの共有設定を確認してください。</p>";
+        document.getElementById("output").textContent = log;
+      } catch (e) {
+        document.getElementById("output").textContent = "読み込み失敗: " + e;
       }
     }
 
