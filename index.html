@@ -21,10 +21,6 @@
       margin: 1.5em auto;
       max-width: 700px;
       padding: 1.5em;
-      transition: transform 0.2s;
-    }
-    .card:hover {
-      transform: translateY(-4px);
     }
     .name {
       font-size: 1.4em;
@@ -74,12 +70,11 @@
           const c = r.c;
           if (!c) return;
 
-          const date = c[0]?.v || "";
-          const name = c[1]?.v || "";       // 料理名（活用方法）
-          const ingredient = c[2]?.v || ""; // 試したシネコ生産材
-          const imageUrl = c[8]?.v || "";   // 写真のリンク（I列 → index 8）
+          const name = c[1]?.v || "";       // B列: 料理名
+          const ingredient = c[2]?.v || ""; // C列: 食材
+          const photoUrl = c[8]?.v || "";   // I列: 写真のリンク
 
-          if (!name && !ingredient && !imageUrl) return;
+          if (!name && !ingredient && !photoUrl) return;
 
           const card = document.createElement("div");
           card.className = "card";
@@ -87,8 +82,8 @@
             <div class="name">${name}</div>
             <div class="ingredient"><b>食材：</b>${ingredient || "（未入力）"}</div>
             ${
-              imageUrl
-                ? `<div class="photo"><img src="${imageUrl}" alt="${name}" onerror="this.style.display='none'"></div>`
+              photoUrl
+                ? `<div class="photo"><img src="${photoUrl}" alt="${name}" onerror="this.style.display='none'"></div>`
                 : ""
             }
           `;
