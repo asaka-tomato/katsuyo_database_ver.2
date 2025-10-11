@@ -63,6 +63,7 @@
         const text = await res.text();
         const json = JSON.parse(text.substr(47).slice(0, -2));
         const rows = json.table.rows;
+        console.log("取得データ:", json.table.rows);
         const container = document.getElementById("content");
         container.innerHTML = "";
 
