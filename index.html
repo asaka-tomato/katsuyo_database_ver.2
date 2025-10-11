@@ -2,42 +2,62 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>AppSheet 活用記録（自動リンク対応）</title>
+  <title>活用法データベース</title>
   <style>
     body {
       font-family: "Noto Sans JP", sans-serif;
-      background-color: #f8f8f8;
+      background-color: #fafafa;
       margin: 2em;
     }
     h1 {
       text-align: center;
-      margin-bottom: 2em;
+      margin-bottom: 1.5em;
+      color: #333;
     }
     .card {
       background-color: #fff;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
       margin: 1.5em auto;
-      max-width: 600px;
+      max-width: 700px;
       padding: 1.5em;
+      transition: transform 0.2s;
     }
-    .card img {
-      max-width: 100%;
-      border-radius: 6px;
+    .card:hover {
+      transform: translateY(-4px);
+    }
+    .name {
+      font-size: 1.4em;
+      font-weight: bold;
+      color: #222;
+      margin-bottom: 0.5em;
+    }
+    .ingredient {
+      font-size: 1em;
+      color: #555;
+      margin-bottom: 0.8em;
+    }
+    .photo {
+      text-align: center;
       margin-top: 10px;
+    }
+    .photo img {
+      max-width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
     .error {
       color: #b00;
       text-align: center;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h1>AppSheet 活用記録</h1>
-  <div id="records">データを読み込み中...</div>
+  <h1>活用法データベース</h1>
+  <div id="content">データを読み込み中...</div>
 
   <script>
-    // ✅ スプレッドシート公開リンク（公開アクセス可能にしておく）
     const sheetUrl =
       "https://docs.google.com/spreadsheets/d/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/gviz/tq?sheet=全体活用記録&tqx=out:json";
 
@@ -47,39 +67,41 @@
         const text = await res.text();
         const json = JSON.parse(text.substr(47).slice(0, -2));
         const rows = json.table.rows;
-        const container = document.getElementById("records");
+        const container = document.getElementById("content");
         container.innerHTML = "";
 
-        // === 各行をループ ===
-        rows.forEach((r, index) => {
+        rows.forEach((r) => {
           const c = r.c;
           if (!c) return;
 
           const date = c[0]?.v || "";
-          const source = c[3]?.v || "";
-          const note = c[7]?.v || "";
-          const imageUrl = c[12]?.v || ""; // ✅ 「写真のリンク」列に対応（13列目）
+          const name = c[1]?.v || "";       // 料理名（活用方法）
+          const ingredient = c[2]?.v || ""; // 試したシネコ生産材
+          const imageUrl = c[8]?.v || "";   // 写真のリンク（I列 → index 8）
 
-          if (!imageUrl) return;
+          if (!name && !ingredient && !imageUrl) return;
 
           const card = document.createElement("div");
           card.className = "card";
           card.innerHTML = `
-            <p><b>作成日:</b> ${date}</p>
-            <p><b>出典:</b> ${source}</p>
-            <p><b>備考:</b> ${note}</p>
-            <img src="${imageUrl}" alt="写真" onerror="this.style.display='none'">
+            <div class="name">${name}</div>
+            <div class="ingredient"><b>食材：</b>${ingredient || "（未入力）"}</div>
+            ${
+              imageUrl
+                ? `<div class="photo"><img src="${imageUrl}" alt="${name}" onerror="this.style.display='none'"></div>`
+                : ""
+            }
           `;
           container.appendChild(card);
         });
 
         if (container.innerHTML === "")
-          container.innerHTML = "<p class='error'>画像付きのデータが見つかりません。</p>";
+          container.innerHTML = "<p class='error'>データが見つかりません。</p>";
 
       } catch (err) {
         console.error("読み込みエラー:", err);
-        document.getElementById("records").innerHTML =
-          "<p class='error'>データを読み込めませんでした。スプレッドシートの共有設定を確認してください。</p>";
+        document.getElementById("content").innerHTML =
+          "<p class='error'>スプレッドシートの共有設定を確認してください。</p>";
       }
     }
 
