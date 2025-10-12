@@ -1,112 +1,98 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>活用法データベース</title>
-    <style>
-      body {
-        font-family: "Helvetica Neue", Arial, sans-serif;
-        background: #f5f6fa;
-        margin: 0;
-        padding: 20px;
-        color: #333;
-      }
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全体活用記録データベース</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", sans-serif;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .record {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 16px;
+      margin: 16px auto;
+      max-width: 700px;
+    }
+    .photo {
+      text-align: center;
+      margin: 10px 0;
+    }
+    .photo img {
+      max-width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .name {
+      font-size: 1.4em;
+      font-weight: bold;
+      color: #444;
+    }
+    .ingredients {
+      color: #666;
+      margin-top: 8px;
+    }
+    .no-photo {
+      color: #aaa;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>全体活用記録データベース</h1>
+  <div id="data"></div>
 
-      h1 {
-        text-align: center;
-        margin-bottom: 30px;
-      }
+  <script>
+    // ✅ Apps ScriptのURL
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxKLWvhjJ1sl3IEnTZtnf-c_-qAGoC8J1aBBA8AdVmFl-V2t9Z3ke-_XMzf-mNnNAMC/exec";
 
-      .container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 20px;
-      }
+    // ✅ JSONファイル（スプレッドシートから生成済みのデータ）
+    async function loadData() {
+      const response = await fetch("data.json"); // ← スプレッドシートから生成したJSON
+      const data = await response.json();
 
-      .card {
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        padding: 16px;
-        transition: transform 0.2s;
-      }
+      const container = document.getElementById("data");
+      container.innerHTML = "";
 
-      .card:hover {
-        transform: translateY(-4px);
-      }
+      data.forEach(item => {
+        const name = item["料理名"] || "（名称未設定）";
+        const ingredients = item["食材"] || "";
+        const photoPath = item["写真1"]; // ← AppSheetが出力するDriveパス
+        let photoUrl = "";
 
-      .card img {
-        width: 100%;
-        height: 180px;
-        object-fit: cover;
-        border-radius: 8px;
-        margin-top: 10px;
-      }
-
-      .photo {
-        text-align: center;
-      }
-
-      .loading {
-        text-align: center;
-        font-size: 1.2em;
-        color: #666;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>🌿 活用法データベース</h1>
-    <div id="content" class="container"></div>
-    <div id="loading" class="loading">データを読み込み中...</div>
-
-    <script>
-      // ✅ あなたのスプレッドシートを参照
-      const sheetUrl =
-        "https://docs.google.com/spreadsheets/d/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/gviz/tq?sheet=全体活用記録&tqx=out:json";
-
-      async function loadData() {
-        try {
-          const res = await fetch(sheetUrl);
-          const text = await res.text();
-          const json = JSON.parse(text.substr(47).slice(0, -2));
-          const rows = json.table.rows;
-          const container = document.getElementById("content");
-          const loading = document.getElementById("loading");
-          container.innerHTML = "";
-          loading.style.display = "none";
-
-          rows.forEach((row) => {
-            // ✅ 各列の位置に合わせて取得
-            const name = row.c[1]?.v || "";
-            const ingredient = row.c[2]?.v || "";
-            const photoUrl = row.c[8]?.v || "";
-
-            // デバッグ出力（ブラウザのConsoleで確認可能）
-            console.log("料理:", name, "食材:", ingredient, "画像URL:", photoUrl);
-
-            // HTMLカード生成
-            const card = `
-              <div class="card">
-                <h2>${name || "（無題）"}</h2>
-                <p><strong>食材：</strong>${ingredient || "（未記入）"}</p>
-                ${
-                  photoUrl
-                    ? `<div class="photo"><img src="${photoUrl}" alt="${name}" onerror="this.style.display='none'"></div>`
-                    : ""
-                }
-              </div>
-            `;
-            container.innerHTML += card;
-          });
-        } catch (err) {
-          console.error("❌ データ読み込みエラー:", err);
-          document.getElementById("loading").innerText =
-            "データの読み込みに失敗しました。";
+        // ✅ GAS経由URLを生成
+        if (photoPath && typeof photoPath === "string") {
+          photoUrl = `${GAS_URL}?path=${encodeURIComponent(photoPath)}`;
         }
-      }
 
-      loadData();
-    </script>
-  </body>
+        const recordHTML = `
+          <div class="record">
+            <div class="name">${name}</div>
+            <div class="ingredients">食材: ${ingredients}</div>
+            ${
+              photoUrl
+                ? `<div class="photo"><img src="${photoUrl}" alt="${name}" onerror="this.style.display='none'"></div>`
+                : `<div class="no-photo">写真なし</div>`
+            }
+          </div>
+        `;
+        container.insertAdjacentHTML("beforeend", recordHTML);
+      });
+    }
+
+    loadData().catch(err => {
+      document.getElementById("data").innerText = "データを読み込めませんでした。";
+      console.error(err);
+    });
+  </script>
+</body>
 </html>
