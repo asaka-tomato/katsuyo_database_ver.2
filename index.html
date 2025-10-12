@@ -74,9 +74,9 @@
           if (!c) return;
 
           // ✅ 列番号を実際のスプレッドシートに合わせて調整
-          const name = c[2]?.v || "";        // 料理名（列C）
-          const ingredients = c[3]?.v || ""; // 食材（列D）
-          const photoUrl = c[12]?.v || "";   // 写真のリンク（列M）
+          const name = c[1]?.v || "";        // 料理名（列C）
+          const ingredients = c[2]?.v || ""; // 食材（列D）
+          const photoUrl = c[8]?.v || "";   // 写真のリンク（列M）
 
           if (!name && !ingredients && !photoUrl) return;
 
