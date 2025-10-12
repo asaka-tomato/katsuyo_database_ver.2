@@ -1,112 +1,101 @@
-/**
- * ===============================================
- * AppSheet画像をDrive共有フォルダへコピーし、
- * 公開URLを生成 ＋ HTMLで安全に画像を配信
- * ===============================================
- */
-
-function copyAppSheetImages() {
-  // === 設定部分 ===
-  const sourceFolderId = "1j8VOQJzHn-U3NfF1NjX_agWatcMuoS7o"; // AppSheet画像フォルダ
-  const targetFolderId = "1fTGEHh40QJz2i65Ym3IjGvMxj4xddsXQ"; // SharedImages フォルダID
-  const sheetName = "全体活用記録";
-  const photoColumnName = "写真1";     // ファイルパスが入っている列
-  const urlColumnName = "写真のリンク"; // 公開URLを書き込む列
-
-  // === 処理部分 ===
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(sheetName);
-  const data = sheet.getDataRange().getValues();
-
-  const headerRow = 2; // 2行目がヘッダー
-  const header = data[headerRow];
-  const photoColIndex = header.indexOf(photoColumnName);
-  const urlColIndex = header.indexOf(urlColumnName);
-
-  if (photoColIndex === -1 || urlColIndex === -1) {
-    Logger.log("❌ 列名が見つかりません。ヘッダー行を確認してください。");
-    return;
-  }
-
-  const sourceFolder = DriveApp.getFolderById(sourceFolderId);
-  const targetFolder = DriveApp.getFolderById(targetFolderId);
-  const sourceFiles = sourceFolder.getFiles();
-  const copiedFiles = {};
-
-  // ソース画像の一覧を作る
-  while (sourceFiles.hasNext()) {
-    const file = sourceFiles.next();
-    copiedFiles[file.getName()] = file;
-  }
-
-  // 各行を処理
-  for (let i = headerRow + 1; i < data.length; i++) {
-    const photoPath = data[i][photoColIndex];
-    if (!photoPath || typeof photoPath !== "string") continue;
-
-    const photoName = photoPath.split("/").pop();
-    if (!photoName) continue;
-
-    const existingUrl = data[i][urlColIndex];
-    if (existingUrl && existingUrl.toString().startsWith("https://drive.google.com/uc")) continue;
-
-    const file = copiedFiles[photoName];
-    if (file) {
-      // 既に存在する場合は上書きせず再利用
-      const existing = targetFolder.getFilesByName(photoName);
-      let targetFile;
-      if (existing.hasNext()) {
-        targetFile = existing.next();
-      } else {
-        targetFile = file.makeCopy(photoName, targetFolder);
-      }
-
-      // ✅ 公開設定
-      targetFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-      // ✅ 公開URLをシートに書き込む
-      const url = "https://drive.google.com/uc?export=view&id=" + targetFile.getId();
-      sheet.getRange(i + 1, urlColIndex + 1).setValue(url);
-
-      Logger.log("✅ 公開URL作成: " + photoName + " → " + url);
-    } else {
-      Logger.log("⚠️ ファイル未検出: " + photoName);
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>活用法データベース</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", sans-serif;
+      background-color: #f7f8fa;
+      margin: 0;
+      padding: 20px;
     }
-  }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin: 12px auto;
+      padding: 16px;
+      max-width: 600px;
+    }
+    .name {
+      font-size: 1.4em;
+      font-weight: bold;
+      color: #222;
+    }
+    .ingredients {
+      color: #555;
+      margin-top: 8px;
+    }
+    .photo {
+      margin-top: 12px;
+      text-align: center;
+    }
+    .photo img {
+      max-width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .no-photo {
+      color: #aaa;
+      font-style: italic;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>活用法データベース</h1>
+  <div id="data"></div>
 
-  Logger.log("🎉 すべての処理が完了しました！");
-}
+  <script>
+    // ✅ 取得した Apps Script Web アプリ URL
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbynsTYygawrbyOTGjOmZb-lkhHbVPAVBVg8_uaM4gpo5wYvTTfVZBXLRSwmD-dF0eRK/exec";
 
-/**
- * ===============================================
- * 画像中継API（HTMLで403回避）
- * https://script.google.com/macros/s/AKfycbx.../exec?path=トマト.写真1.111526.jpg
- * ===============================================
- */
-function doGet(e) {
-  const path = e.parameter.path;
-  if (!path) return ContentService.createTextOutput("Missing 'path'");
+    async function loadData() {
+      try {
+        const res = await fetch("data.json");  // すでに作られている JSON データ
+        const data = await res.json();
+        const container = document.getElementById("data");
+        container.innerHTML = "";
 
-  const folderId = "1fTGEHh40QJz2i65Ym3IjGvMxj4xddsXQ"; // SharedImages
-  const folder = DriveApp.getFolderById(folderId);
+        data.forEach(item => {
+          const name = item["料理名"] || "（名称なし）";
+          const ingredients = item["食材"] || "";
+          const photoPath = item["写真1"]; // AppSheetで設定している列
+          let photoUrl = "";
 
-  const parts = path.split("/");
-  const fileName = parts.pop();
-  let subfolder = folder;
+          if (photoPath && typeof photoPath === "string") {
+            // ファイルパスからファイル名を取り出して中継APIへ渡す
+            const fileName = photoPath.split("/").pop();
+            photoUrl = `${GAS_URL}?path=${encodeURIComponent(fileName)}`;
+          }
 
-  // サブフォルダが含まれている場合
-  for (const name of parts) {
-    const next = subfolder.getFoldersByName(name);
-    if (next.hasNext()) subfolder = next.next();
-    else return ContentService.createTextOutput("Subfolder not found: " + name);
-  }
+          const cardHtml = `
+            <div class="card">
+              <div class="name">${name}</div>
+              <div class="ingredients">食材：${ingredients}</div>
+              ${
+                photoUrl
+                  ? `<div class="photo"><img src="${photoUrl}" alt="${name}" onerror="this.style.display='none'"></div>`
+                  : `<div class="no-photo">写真なし</div>`
+              }
+            </div>
+          `;
+          container.insertAdjacentHTML("beforeend", cardHtml);
+        });
+      } catch (err) {
+        console.error("データ読み込みエラー:", err);
+        document.getElementById("data").innerText = "データ取得に失敗しました。";
+      }
+    }
 
-  const files = subfolder.getFilesByName(fileName);
-  if (!files.hasNext()) return ContentService.createTextOutput("File not found: " + fileName);
-
-  const file = files.next();
-  const blob = file.getBlob();
-
-  // ✅ HTMLから直接読み込めるように返す
-  return ContentService.createBinaryOutput(blob).setMimeType(blob.getContentType());
-}
+    loadData();
+  </script>
+</body>
+</html>
