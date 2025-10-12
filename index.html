@@ -1,68 +1,110 @@
-function copyAppSheetImages() {
-  // === 設定部分 ===
-  const sourceFolderId = "1j8VOQJzHn-U3NfF1NjX_agWatcMuoS7o"; // AppSheet画像フォルダ
-  const targetFolderId = "1fTGEHh40QJz2i65Ym3IjGvMxj4xddsXQ"; // ← SharedImages フォルダID
-  const sheetName = "全体活用記録";
-  const photoColumnName = "写真1";     // ファイルパスが入っている列
-  const urlColumnName = "写真のリンク"; // 公開URLを書き込む列
-
-  // === 処理部分 ===
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(sheetName);
-  const data = sheet.getDataRange().getValues();
-
-  const headerRow = 2; // 2行目が見出し行
-  const header = data[headerRow];
-  const photoColIndex = header.indexOf(photoColumnName);
-  const urlColIndex = header.indexOf(urlColumnName);
-
-  if (photoColIndex === -1 || urlColIndex === -1) {
-    Logger.log("❌ 列名が見つかりません。ヘッダー行を確認してください。");
-    return;
-  }
-
-  const sourceFolder = DriveApp.getFolderById(sourceFolderId);
-  const targetFolder = DriveApp.getFolderById(targetFolderId);
-  const sourceFiles = sourceFolder.getFiles();
-  const copiedFiles = {};
-
-  while (sourceFiles.hasNext()) {
-    const file = sourceFiles.next();
-    copiedFiles[file.getName()] = file;
-  }
-
-  for (let i = headerRow + 1; i < data.length; i++) {
-    const photoPath = data[i][photoColIndex];
-    if (!photoPath || typeof photoPath !== "string") continue;
-
-    const photoName = photoPath.split("/").pop();
-    if (!photoName) continue;
-
-    const existingUrl = data[i][urlColIndex];
-    if (existingUrl && existingUrl.toString().startsWith("https://drive.google.com/uc")) continue;
-
-    const file = copiedFiles[photoName];
-    if (file) {
-      // 同名ファイルがすでにあればそれを使用、なければコピー
-      const existing = targetFolder.getFilesByName(photoName);
-      let targetFile;
-      if (existing.hasNext()) {
-        targetFile = existing.next();
-      } else {
-        targetFile = file.makeCopy(photoName, targetFolder);
-      }
-
-      // ✅ 公開設定を「リンクを知っている全員」に変更
-      targetFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-      // ✅ 画像URLを作成
-      const url = "https://drive.google.com/uc?export=view&id=" + targetFile.getId();
-      sheet.getRange(i + 1, urlColIndex + 1).setValue(url);
-      Logger.log("✅ 公開URL作成: " + photoName + " → " + url);
-    } else {
-      Logger.log("⚠️ ファイル未検出: " + photoName);
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>料理データベース</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", sans-serif;
+      background-color: #f9f9f9;
+      margin: 2em;
     }
-  }
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5em;
+      color: #333;
+    }
+    .card {
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+      margin: 1.5em auto;
+      max-width: 650px;
+      padding: 1.5em;
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+    }
+    .photo {
+      text-align: center;
+      margin-top: 10px;
+    }
+    .photo img {
+      max-width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .name {
+      font-size: 1.4em;
+      font-weight: bold;
+      margin-bottom: 0.5em;
+      color: #222;
+    }
+    .ingredients {
+      font-size: 1em;
+      color: #555;
+    }
+    .error {
+      color: #b00;
+      text-align: center;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>料理データベース</h1>
+  <div id="content">データを読み込み中...</div>
 
-  Logger.log("🎉 すべての処理が完了しました！");
-}
+  <script>
+    const sheetUrl =
+      "https://docs.google.com/spreadsheets/d/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/gviz/tq?sheet=全体活用記録&tqx=out:json";
+
+    async function loadData() {
+      try {
+        const res = await fetch(sheetUrl);
+        const text = await res.text();
+        const json = JSON.parse(text.substr(47).slice(0, -2));
+        const rows = json.table.rows;
+        const container = document.getElementById("content");
+        container.innerHTML = "";
+
+        rows.forEach((r, index) => {
+          const c = r.c;
+          if (!c) return;
+
+          // ✅ 列番号を実際のスプレッドシートに合わせて調整
+          const name = c[2]?.v || "";        // 料理名（列C）
+          const ingredients = c[3]?.v || ""; // 食材（列D）
+          const photoUrl = c[12]?.v || "";   // 写真のリンク（列M）
+
+          if (!name && !ingredients && !photoUrl) return;
+
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="name">${name || "(料理名なし)"}</div>
+            <div class="ingredients"><b>食材:</b> ${ingredients || "（未入力）"}</div>
+            ${
+              photoUrl
+                ? `<div class="photo"><img src="${photoUrl}" alt="${name}の写真" onerror="this.style.display='none'"></div>`
+                : ""
+            }
+          `;
+          container.appendChild(card);
+        });
+
+        if (container.innerHTML === "")
+          container.innerHTML = "<p class='error'>データが見つかりませんでした。</p>";
+
+      } catch (err) {
+        console.error("読み込みエラー:", err);
+        document.getElementById("content").innerHTML =
+          "<p class='error'>スプレッドシートの共有設定を確認してください。</p>";
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
