@@ -55,42 +55,46 @@
   <div id="data"></div>
 
   <script>
-    // ✅ スプレッドシート→JSONを返すGASのURLを指定
-    const DATA_URL = "https://script.google.com/macros/s/AKfycbzUYcOKpDGwgwTAg8QfNeSH54AoF-ZlNM6js9jRgiM6hMhV4byb4vOQJiwGbznMy1U-/exec";
+  const DATA_URL = "https://script.google.com/macros/s/AKfycbyPqbwjTg7zVavh_ePpafeeaWN5WhYHDRoDOSPNgyDIRTwTpF4B1DoR3T7uHDXhMIUI/exec";
 
-    async function loadData() {
-      try {
-        const res = await fetch(DATA_URL);
-        const data = await res.json();
+  async function loadData() {
+    try {
+      const res = await fetch(DATA_URL);
+      const data = await res.json();
 
-        const container = document.getElementById("data");
-        container.innerHTML = "";
+      const container = document.getElementById("data");
+      container.innerHTML = "";
 
-        data.forEach(item => {
-          const name = item["料理名"] || "（名称なし）";
-          const ingredients = item["食材"] || "（未入力）";
-          const photoUrl = item["URL"]; // ← O列のAppSheet画像URLをそのまま使用
+      data.forEach(item => {
+        // ✅ スプレッドシート列名に合わせる
+        const name = item["料理名（活用方法）"] || "（名称なし）";
+        const ingredients = item["使用したシネコ生産物"] || "（未入力）";
+        const source = item["出典"] || "（不明）";
+        const notes = item["備考"] || "";
+        const photoUrl = item["URL"];
 
-          const cardHtml = `
-            <div class="card">
-              <div class="name">${name}</div>
-              <div class="ingredients">食材：${ingredients}</div>
-              ${
-                photoUrl
-                  ? `<div class="photo"><img src="${photoUrl}" alt="${name}" onerror="this.style.display='none'"></div>`
-                  : `<div class="no-photo">写真なし</div>`
-              }
-            </div>
-          `;
-          container.insertAdjacentHTML("beforeend", cardHtml);
-        });
-      } catch (err) {
-        console.error("データ取得エラー:", err);
-        document.getElementById("data").innerText = "データの読み込みに失敗しました。";
-      }
+        const cardHtml = `
+          <div class="card">
+            <div class="name">${name}</div>
+            <div class="ingredients">食材：${ingredients}</div>
+            <div class="source">出典：${source}</div>
+            ${photoUrl
+              ? `<div class="photo"><img src="${photoUrl}" alt="${name}" onerror="this.style.display='none'"></div>`
+              : `<div class="no-photo">写真なし</div>`
+            }
+            ${notes ? `<div class="notes">${notes}</div>` : ""}
+          </div>
+        `;
+        container.insertAdjacentHTML("beforeend", cardHtml);
+      });
+    } catch (err) {
+      console.error("データ取得エラー:", err);
+      document.getElementById("data").innerText = "データの読み込みに失敗しました。";
     }
+  }
 
-    loadData();
-  </script>
+  loadData();
+</script>
+
 </body>
 </html>
