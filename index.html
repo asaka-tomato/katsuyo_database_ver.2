@@ -67,8 +67,8 @@
         container.innerHTML = "";
 
         data.forEach(item => {
-          const name = item["料理名"] || "（名称なし）";
-          const ingredients = item["食材"] || "（未入力）";
+          const name = item["料理名(活用方法)"] || "（名称なし）";
+          const ingredients = item["使用したシネコ産物"] || "（未入力）";
           const photoUrl = item["URL"]; // ← O列のAppSheet画像URLをそのまま使用
 
           const cardHtml = `
