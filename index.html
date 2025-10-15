@@ -2,105 +2,91 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>料理データベース</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>活用法データベース</title>
   <style>
     body {
       font-family: "Noto Sans JP", sans-serif;
-      background-color: #f9f9f9;
-      margin: 2em;
+      background-color: #f7f8fa;
+      margin: 0;
+      padding: 20px;
     }
     h1 {
       text-align: center;
-      margin-bottom: 1.5em;
       color: #333;
+      margin-bottom: 20px;
     }
     .card {
-      background-color: #fff;
-      border-radius: 12px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-      margin: 1.5em auto;
-      max-width: 650px;
-      padding: 1.5em;
-      transition: transform 0.2s;
-    }
-    .card:hover {
-      transform: translateY(-3px);
-    }
-    .photo {
-      text-align: center;
-      margin-top: 10px;
-    }
-    .photo img {
-      max-width: 100%;
+      background: #fff;
       border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin: 12px auto;
+      padding: 16px;
+      max-width: 600px;
     }
     .name {
-      font-size: 1.4em;
+      font-size: 1.3em;
       font-weight: bold;
-      margin-bottom: 0.5em;
       color: #222;
     }
     .ingredients {
-      font-size: 1em;
       color: #555;
+      margin-top: 8px;
     }
-    .error {
-      color: #b00;
+    .photo {
+      margin-top: 12px;
       text-align: center;
-      font-weight: bold;
+    }
+    .photo img {
+      max-width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .no-photo {
+      color: #aaa;
+      font-style: italic;
+      margin-top: 8px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <h1>料理データベース</h1>
-  <div id="content">データを読み込み中...</div>
+  <h1>活用法データベース</h1>
+  <div id="data"></div>
 
   <script>
-    const sheetUrl =
-      "https://docs.google.com/spreadsheets/d/1zTZcCo36XxvVzOxVeJj4TW30j0SBArUwnQxYbh04sMU/gviz/tq?sheet=全体活用記録&tqx=out:json";
+    // ✅ スプレッドシート→JSONを返すGASのURLを指定
+    const DATA_URL = "https://script.google.com/macros/s/AKfycbyPqbwjTg7zVavh_ePpafeeaWN5WhYHDRoDOSPNgyDIRTwTpF4B1DoR3T7uHDXhMIUI/exec";
 
     async function loadData() {
       try {
-        const res = await fetch(sheetUrl);
-        const text = await res.text();
-        const json = JSON.parse(text.substr(47).slice(0, -2));
-        const rows = json.table.rows;
-        const container = document.getElementById("content");
+        const res = await fetch(DATA_URL);
+        const data = await res.json();
+
+        const container = document.getElementById("data");
         container.innerHTML = "";
 
-        rows.forEach((r, index) => {
-          const c = r.c;
-          if (!c) return;
+        data.forEach(item => {
+          const name = item["料理名"] || "（名称なし）";
+          const ingredients = item["食材"] || "（未入力）";
+          const photoUrl = item["URL"]; // ← O列のAppSheet画像URLをそのまま使用
 
-          // ✅ 列番号を実際のスプレッドシートに合わせて調整
-          const name = c[1]?.v || "";        // 料理名（列C）
-          const ingredients = c[2]?.v || ""; // 食材（列D）
-          const photoUrl = c[8]?.v || "";   // 写真のリンク（列M）
-
-          if (!name && !ingredients && !photoUrl) return;
-
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <div class="name">${name || "(料理名なし)"}</div>
-            <div class="ingredients"><b>食材:</b> ${ingredients || "（未入力）"}</div>
-            ${
-              photoUrl
-                ? `<div class="photo"><img src="${photoUrl}" alt="${name}の写真" onerror="this.style.display='none'"></div>`
-                : ""
-            }
+          const cardHtml = `
+            <div class="card">
+              <div class="name">${name}</div>
+              <div class="ingredients">食材：${ingredients}</div>
+              ${
+                photoUrl
+                  ? `<div class="photo"><img src="${photoUrl}" alt="${name}" onerror="this.style.display='none'"></div>`
+                  : `<div class="no-photo">写真なし</div>`
+              }
+            </div>
           `;
-          container.appendChild(card);
+          container.insertAdjacentHTML("beforeend", cardHtml);
         });
-
-        if (container.innerHTML === "")
-          container.innerHTML = "<p class='error'>データが見つかりませんでした。</p>";
-
       } catch (err) {
-        console.error("読み込みエラー:", err);
-        document.getElementById("content").innerHTML =
-          "<p class='error'>スプレッドシートの共有設定を確認してください。</p>";
+        console.error("データ取得エラー:", err);
+        document.getElementById("data").innerText = "データの読み込みに失敗しました。";
       }
     }
 
