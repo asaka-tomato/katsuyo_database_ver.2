@@ -6,77 +6,56 @@
   <title>活用法データベース</title>
   <style>
     body {
-      font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-      background: #f9fafb;
+      font-family: "Noto Sans JP", sans-serif;
+      background-color: #f7f8fa;
       margin: 0;
-      padding: 0;
-      text-align: center;
+      padding: 20px;
     }
-
     h1 {
-      margin: 24px 0;
-      font-size: 1.8em;
-      color: #333;
-    }
-
-    #data {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin: 16px auto;
-      padding: 16px;
-      width: 90%;
-      max-width: 500px;
-      text-align: left;
-    }
-
-    .name {
-      font-weight: bold;
-      font-size: 1.2em;
-      margin-bottom: 6px;
-    }
-
-    .ingredients, .source {
-      color: #555;
-      font-size: 0.95em;
-      margin-bottom: 4px;
-    }
-
-    .photo img {
-      width: 100%;
-      border-radius: 10px;
-      margin-top: 8px;
-    }
-
-    .notes {
-      margin-top: 8px;
-      font-size: 0.95em;
-      line-height: 1.5;
-      color: #444;
-    }
-
-    .no-photo {
-      background: #eee;
-      padding: 40px 0;
       text-align: center;
-      color: #777;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: #fff;
       border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin: 12px auto;
+      padding: 16px;
+      max-width: 600px;
+    }
+    .name {
+      font-size: 1.3em;
+      font-weight: bold;
+      color: #222;
+    }
+    .ingredients {
+      color: #555;
       margin-top: 8px;
+    }
+    .photo {
+      margin-top: 12px;
+      text-align: center;
+    }
+    .photo img {
+      max-width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .no-photo {
+      color: #aaa;
+      font-style: italic;
+      margin-top: 8px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <h1>活用法データベース</h1>
-  <div id="data">読み込み中...</div>
+  <div id="data"></div>
 
   <script>
-    // 🔗 Google Apps Script の WebアプリURLをここに入れてください
+    // ✅ スプレッドシート→JSONを返すGASのURLを指定
     const DATA_URL = "https://script.google.com/macros/s/AKfycbyPqbwjTg7zVavh_ePpafeeaWN5WhYHDRoDOSPNgyDIRTwTpF4B1DoR3T7uHDXhMIUI/exec";
 
     async function loadData() {
@@ -88,24 +67,19 @@
         container.innerHTML = "";
 
         data.forEach(item => {
-          // スプレッドシートの列名に合わせて取得
-          const name = item["料理名（活用方法）"] || "（名称なし）";
-          const ingredients = item["使用したシネコ生産物"] || "（未入力）";
-          const source = item["出典"] || "（不明）";
-          const notes = item["備考"] || "";
-          const photoUrl = item["URL"];
+          const name = item["料理名"] || "（名称なし）";
+          const ingredients = item["食材"] || "（未入力）";
+          const photoUrl = item["URL"]; // ← O列のAppSheet画像URLをそのまま使用
 
           const cardHtml = `
             <div class="card">
               <div class="name">${name}</div>
               <div class="ingredients">食材：${ingredients}</div>
-              <div class="source">出典：${source}</div>
               ${
                 photoUrl
                   ? `<div class="photo"><img src="${photoUrl}" alt="${name}" onerror="this.style.display='none'"></div>`
                   : `<div class="no-photo">写真なし</div>`
               }
-              ${notes ? `<div class="notes">${notes}</div>` : ""}
             </div>
           `;
           container.insertAdjacentHTML("beforeend", cardHtml);
